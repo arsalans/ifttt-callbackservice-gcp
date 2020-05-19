@@ -21,17 +21,24 @@ public class PingController extends BaseController {
         return pong;
     }
 
-    @RequestMapping(path = "/now", method = RequestMethod.GET)
-    public Map<String, DateTime> getSystemDate() {
+    @RequestMapping(path = "/system/time", method = RequestMethod.GET)
+    public Map<String, DateTime> getSystemTime() {
         Map<String, DateTime> dateMap = new HashMap<>();
-        dateMap.put("date", new DateTime());
+        dateMap.put("systemTime", new DateTime());
+        return dateMap;
+    }
+
+    @RequestMapping(path = "/toronto/time", method = RequestMethod.GET)
+    public Map<String, DateTime> getTorontoTime() {
+        Map<String, DateTime> dateMap = new HashMap<>();
+        dateMap.put("torontoTime", getTorontoDateTime());
         return dateMap;
     }
 
     @RequestMapping(path = "/isNightTime", method = RequestMethod.GET)
     public Map<String, Boolean> getIsNightTime() {
         Map<String, Boolean> dateMap = new HashMap<>();
-        dateMap.put("date", isNightTime());
+        dateMap.put("nightTime", isNightTime());
         return dateMap;
     }
 }
