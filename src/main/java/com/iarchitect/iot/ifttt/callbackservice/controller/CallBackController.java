@@ -10,8 +10,8 @@ import java.util.concurrent.*;
 @RestController
 //@EnableWebMvc
 public class CallBackController extends BaseController {
+
     private final RestTemplate restTemplate;
-    //    final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(10);
     final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(10);
     final ScheduledExecutorService exitingScheduledExecutorService =
             MoreExecutors.getExitingScheduledExecutorService(scheduledThreadPoolExecutor, 15, TimeUnit.MINUTES);
@@ -23,7 +23,7 @@ public class CallBackController extends BaseController {
     @RequestMapping(path = "/event/{eventName}/key/{apiKey}", method = RequestMethod.GET)
     public String callNow(@PathVariable String eventName,
                           @PathVariable String apiKey) {
-        String url = buildCallBackUrl(eventName, apiKey);
+        String url = buildIftttUrl(eventName, apiKey);
         return this.restTemplate.getForObject(url, String.class);
     }
 
@@ -42,9 +42,32 @@ public class CallBackController extends BaseController {
         return "Nothing scheduled";
     }
 
+    @RequestMapping(path = "/turnOn/event/{turnOnEventName}/delay/{delay}/turnOff/event/{turnOffEventName}/key/{apiKey}", method = RequestMethod.GET)
+    public String ringOnAndRequestCallBack(@PathVariable String turnOnEventName,
+                                           @PathVariable long delay,
+                                           @PathVariable String turnOffEventName,
+                                           @PathVariable String apiKey,
+                                           @RequestParam boolean nightOnly) throws ExecutionException, InterruptedException {
+        if (nightOnly) {
+            if (isNightTime()) {
+                turnRingOn(turnOnEventName, apiKey);
+                return scheduleCallBackAsync(turnOffEventName, delay, apiKey);
+            }
+        } else {
+            turnRingOn(turnOnEventName, apiKey);
+            return scheduleCallBackAsync(turnOffEventName, delay, apiKey);
+        }
+        return "Nothing scheduled";
+    }
+
+    private void turnRingOn(String eventName, String apiKey) {
+        String url = buildIftttUrl(eventName, apiKey);
+        this.restTemplate.getForObject(url, String.class);
+    }
+
     private String scheduleCallBack(String eventName, long delay, String apiKey) throws InterruptedException {
         Thread.sleep(delay * 60 * 1000);
-        String url = buildCallBackUrl(eventName, apiKey);
+        String url = buildIftttUrl(eventName, apiKey);
         return this.restTemplate.getForObject(url, String.class);
     }
 
@@ -60,7 +83,7 @@ public class CallBackController extends BaseController {
     }
 
     private Callable<String> invokeIftttWebHook(String eventName, String apiKey) {
-        String url = buildCallBackUrl(eventName, apiKey);
+        String url = buildIftttUrl(eventName, apiKey);
         return () -> {
             String response = this.restTemplate.getForObject(url, String.class);
             System.out.println("From the thread = " + response);
@@ -68,7 +91,7 @@ public class CallBackController extends BaseController {
         };
     }
 
-    private String buildCallBackUrl(@PathVariable String eventName, @PathVariable String apiKey) {
+    private String buildIftttUrl(@PathVariable String eventName, @PathVariable String apiKey) {
         return "https://maker.ifttt.com/trigger/" + eventName + "/with/key/" + apiKey;
     }
 }
